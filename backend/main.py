@@ -8,6 +8,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# <--- 2. Paste Mohan's CORS snippet here
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 HF_API_URL = "https://router.huggingface.co/hf-inference/models/JyothikaShanmugam/scamshield-muril"
 HF_TOKEN = os.getenv("HF_TOKEN")
 
