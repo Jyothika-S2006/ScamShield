@@ -6,7 +6,7 @@ from pydantic import BaseModel
 app = FastAPI()
 
 HF_API_URL = (
-    "https://api-inference.huggingface.co/models/JyothikaShanmugam/scamshield-muril"
+    "https://router.huggingface.co/hf-inference/models/JyothikaShanmugam/scamshield-muril"
 )
 HF_TOKEN = os.environ.get("HF_TOKEN")
 
