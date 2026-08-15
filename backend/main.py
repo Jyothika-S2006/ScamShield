@@ -1,27 +1,31 @@
-from fastapi import FastAPI
+import requests
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from transformers import pipeline
 
-app = FastAPI(
-    title="ScamShield API",
-    description="Text classification for scam detection using scamshield-muril"
-)
+app = FastAPI(title="ScamShield API")
 
-# Load the model directly using transformers
-classifier = pipeline(
-    "text-classification",
-    model="JyothikaShanmugam/scamshield-muril"
-)
+# Hugging Face Inference Endpoint
+HF_API_URL = "https://api-inference.huggingface.co/models/JyothikaShanmugam/scamshield-muril"
 
-# Define proper request schema to avoid 400/422 errors
-class AnalysisRequest(BaseModel):
+class TextRequest(BaseModel):
     text: str
 
 @app.get("/")
 def home():
-    return {"message": "ScamShield API is running"}
+    return {"status": "ScamShield API is running"}
 
 @app.post("/predict")
-def predict(payload: AnalysisRequest):
-    result = classifier(payload.text)
-    return {"prediction": result}
+def predict(payload: TextRequest):
+    response = requests.post(
+        HF_API_URL,
+        json={"inputs": payload.text},
+        headers={"Content-Type": "application/json"}
+    )
+    
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=response.status_code, 
+            detail=response.json()
+        )
+        
+    return response.json()
