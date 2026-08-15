@@ -13,9 +13,9 @@ class TextRequest(BaseModel):
     text: str
 
 
-@app.get("/")
-def home():
-    return {"message": "ScamShield API is online!"}
+@app.get("/version")
+def version():
+    return {"status": "v2-direct-rest-active"}
 
 
 @app.post("/predict")
