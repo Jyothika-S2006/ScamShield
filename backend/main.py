@@ -5,9 +5,8 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-HF_API_URL = (
-    "https://router.huggingface.co/hf-inference/models/JyothikaShanmugam/scamshield-muril"
-)
+# Updated Hugging Face Serverless Inference URL
+HF_API_URL = "https://router.huggingface.co/hf-inference/models/JyothikaShanmugam/scamshield-muril"
 HF_TOKEN = os.environ.get("HF_TOKEN")
 
 
@@ -24,17 +23,37 @@ def home():
 def predict(payload: TextRequest):
     if not HF_TOKEN:
         raise HTTPException(
-            status_code=500, detail="HF_TOKEN environment variable is missing"
+            status_code=500,
+            detail="HF_TOKEN environment variable is missing on Render",
         )
 
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    response = requests.post(
-        HF_API_URL, headers=headers, json={"inputs": payload.text}
-    )
+    headers = {
+        "Authorization": f"Bearer {HF_TOKEN.strip()}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.post(
+            HF_API_URL,
+            headers=headers,
+            json={"inputs": payload.text},
+            timeout=30,
+        )
+    except requests.exceptions.RequestException as err:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to reach Hugging Face API: {str(err)}",
+        )
+
+    try:
+        data = response.json()
+    except Exception:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Raw HF Response: {response.text}",
+        )
 
     if response.status_code != 200:
-        raise HTTPException(
-            status_code=response.status_code, detail=response.json()
-        )
+        raise HTTPException(status_code=response.status_code, detail=data)
 
-    return response.json()
+    return data
