@@ -1,11 +1,12 @@
 import os
+import requests
 from fastapi import FastAPI, HTTPException
-from huggingface_hub import InferenceClient
 from pydantic import BaseModel
 
 app = FastAPI()
 
-MODEL_ID = "JyothikaShanmugam/scamshield-muril"
+# Direct Hugging Face Serverless API Endpoint
+HF_API_URL = "https://router.huggingface.co/hf-inference/models/JyothikaShanmugam/scamshield-muril"
 
 
 class TextRequest(BaseModel):
@@ -27,12 +28,30 @@ def predict(payload: TextRequest):
             detail="HF_TOKEN environment variable is missing on Render.",
         )
 
+    headers = {
+        "Authorization": f"Bearer {hf_token.strip()}",
+        "Content-Type": "application/json",
+    }
+
     try:
-        # Initialize client with explicit model and token
-        client = InferenceClient(model=MODEL_ID, token=hf_token.strip())
-        results = client.text_classification(payload.text)
-        return results
-    except Exception as err:
-        # Captures exact exception type and full error string
-        detail_msg = f"{type(err).__name__}: {str(err) or repr(err)}"
-        raise HTTPException(status_code=500, detail=detail_msg)
+        response = requests.post(
+            HF_API_URL,
+            headers=headers,
+            json={"inputs": payload.text},
+            timeout=30,
+        )
+    except requests.exceptions.RequestException as err:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to connect to Hugging Face: {str(err)}",
+        )
+
+    # Handle standard non-200 responses safely
+    if response.status_code != 200:
+        try:
+            error_data = response.json()
+        except Exception:
+            error_data = response.text
+        raise HTTPException(status_code=response.status_code, detail=error_data)
+
+    return response.json()
