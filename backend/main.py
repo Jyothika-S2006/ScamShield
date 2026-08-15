@@ -19,20 +19,20 @@ def home():
 
 @app.post("/predict")
 def predict(payload: TextRequest):
-    # Fetch token dynamically per request
     hf_token = os.getenv("HF_TOKEN")
 
     if not hf_token:
         raise HTTPException(
             status_code=500,
-            detail="HF_TOKEN is missing. Please add HF_TOKEN under Render Environment variables.",
+            detail="HF_TOKEN environment variable is missing on Render.",
         )
 
     try:
-        client = InferenceClient(api_key=hf_token.strip())
-        results = client.text_classification(payload.text, model=MODEL_ID)
+        # Initialize client with explicit model and token
+        client = InferenceClient(model=MODEL_ID, token=hf_token.strip())
+        results = client.text_classification(payload.text)
         return results
     except Exception as err:
-        raise HTTPException(
-            status_code=500, detail=f"Hugging Face Error: {str(err)}"
-        )
+        # Captures exact exception type and full error string
+        detail_msg = f"{type(err).__name__}: {str(err) or repr(err)}"
+        raise HTTPException(status_code=500, detail=detail_msg)
